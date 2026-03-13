@@ -1,0 +1,48 @@
+{
+  "manifest_version": 2,
+  "name": "Spotifuck – Spotify Ad-Free Web Player",
+  "version": "1.0.0",
+  "description": "Ad-free Spotify web player: blocks ad networks, substitutes ad audio with silence, spoofs fingerprint, injects classic login, and auto-skips stuck playback.",
+
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "spotifuck@deviato",
+      "strict_min_version": "57.0"
+    }
+  },
+
+  "permissions": [
+    "webRequest",
+    "webRequestBlocking",
+    "storage",
+    "*://*.spotify.com/*",
+    "*://*.facebook.com/*",
+    "*://*.doubleclick.net/*",
+    "*://*.googlesyndication.com/*",
+    "*://*.adnxs.com/*",
+    "*://*.googleadservices.com/*"
+  ],
+
+  "background": {
+    "scripts": ["background.js"],
+    "persistent": true
+  },
+
+  "content_scripts": [
+    {
+      "matches": ["*://*.spotify.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_start",
+      "all_frames": true
+    },
+    {
+      "matches": ["*://*.facebook.com/privacy/consent/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+
+  "web_accessible_resources": [
+    "assets/silent.mp3"
+  ]
+}
