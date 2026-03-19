@@ -1,53 +1,45 @@
 'use strict';
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SECTION A — Page-context injection
+// SECTION A — Fingerprint spoof + fake feature version
 //
-// Content scripts run in an isolated JS sandbox and cannot directly modify
-// window/navigator/screen of the host page.  To spoof those properties we
-// inject a <script> element that runs in the page's own context, then remove
-// it immediately so it leaves no trace in the DOM.
-//
-// Must execute before the page's own scripts, which is why content.js is
-// loaded at "document_start".
+// Firefox MV2 content scripts running at document_start share the real
+// window/navigator/screen objects with the page.  Object.defineProperty called
+// here takes effect before any page script runs — no <script> tag injection
+// needed (and a <script> tag would be blocked by Spotify's strict CSP anyway).
 // ═══════════════════════════════════════════════════════════════════════════════
-(function injectPageContext() {
-  var s = document.createElement('script');
-  s.textContent = [
-    '(function () {',
-    '  "use strict";',
-    '',
-    '  /* ── Fingerprint spoof ─────────────────────────────────────── */',
-    '  var def = function (obj, prop, val) {',
-    '    try {',
-    '      Object.defineProperty(obj, prop, {',
-    '        get: function () { return val; },',
-    '        configurable: true',
-    '      });',
-    '    } catch (e) {}',
-    '  };',
-    '  def(navigator, "platform",    "Win32");',
-    '  def(navigator, "vendor",      "Google Inc.");',
-    '  def(screen,    "width",       1920);',
-    '  def(screen,    "height",      1080);',
-    '  def(screen,    "availWidth",  1920);',
-    '  def(screen,    "availHeight", 1040);',
-    '  def(window,    "outerWidth",  1920);',
-    '  def(window,    "outerHeight", 978);',
-    '  def(window,    "innerWidth",  1920);',
-    '  def(window,    "innerHeight", 978);',
-    '',
-    '  /* ── Fake feature version ──────────────────────────────────── */',
-    '  var _d   = new Date();',
-    '  var _ds  = _d.toISOString().slice(0, 10);',
-    '  var _ts  = _d.getTime();',
-    '  var _rnd = Math.random().toString(16).slice(2, 10);',
-    '  window.featVer = "web-player_" + _ds + "_" + _ts + "_" + _rnd;',
-    '})();'
-  ].join('\n');
+(function spoofFingerprint() {
+  function def(obj, prop, val) {
+    try {
+      Object.defineProperty(obj, prop, {
+        get: function () { return val; },
+        configurable: true
+      });
+    } catch (e) {}
+  }
 
-  (document.head || document.documentElement).appendChild(s);
-  s.remove();
+  // Navigator
+  def(navigator, 'platform', 'Win32');
+  def(navigator, 'vendor',   'Google Inc.');
+
+  // Screen dimensions
+  def(screen, 'width',       1920);
+  def(screen, 'height',      1080);
+  def(screen, 'availWidth',  1920);
+  def(screen, 'availHeight', 1040);
+
+  // Window size
+  def(window, 'outerWidth',  1920);
+  def(window, 'outerHeight', 978);
+  def(window, 'innerWidth',  1920);
+  def(window, 'innerHeight', 978);
+
+  // Fake feature version
+  var d   = new Date();
+  var ds  = d.toISOString().slice(0, 10);
+  var ts  = d.getTime();
+  var rnd = Math.random().toString(16).slice(2, 10);
+  window.featVer = 'web-player_' + ds + '_' + ts + '_' + rnd;
 }());
 
 // ═══════════════════════════════════════════════════════════════════════════════
